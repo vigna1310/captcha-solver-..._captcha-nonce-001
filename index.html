@@ -1,0 +1,113 @@
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Captcha Solver</title>
+<!-- Include Tesseract.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 800px;
+    margin: 2em auto;
+    padding: 1em;
+    background-color: #f9f9f9;
+  }
+  h1 {
+    text-align: center;
+  }
+  #image-container {
+    text-align: center;
+    margin-top: 1em;
+  }
+  #captcha-image {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #ccc;
+  }
+  #result {
+    margin-top: 1em;
+    font-weight: bold;
+    font-size: 1.2em;
+  }
+  button {
+    margin-top: 1em;
+    padding: 0.5em 1em;
+    font-size: 1em;
+  }
+</style>
+</head>
+<body>
+<h1>Captcha Solver</h1>
+
+<div id="instructions">
+  <p>Enter the image URL as a query parameter: <code>?url=YOUR_IMAGE_URL</code></p>
+</div>
+
+<div id="image-container">
+  <img id="captcha-image" src="" alt="Captcha Image" />
+</div>
+
+<div id="controls" style="text-align:center; margin-top:1em;">
+  <button id="solveBtn">Solve Captcha</button>
+</div>
+
+<div id="result">Loading image...</div>
+
+<script>
+  // Default sample image (attached sample)
+  const DEFAULT_IMAGE = 'https://via.placeholder.com/300x100.png?text=Sample+Captcha';
+
+  // Function to get URL parameter
+  function getQueryParam(param) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(param);
+  }
+
+  // Main logic
+  document.addEventListener('DOMContentLoaded', () => {
+    const imageUrl = getQueryParam('url') || DEFAULT_IMAGE;
+    const imgElement = document.getElementById('captcha-image');
+    const resultDiv = document.getElementById('result');
+    const solveButton = document.getElementById('solveBtn');
+
+    // Set the image src
+    imgElement.src = imageUrl;
+
+    imgElement.onload = () => {
+      resultDiv.textContent = 'Image loaded. Click "Solve Captcha" to attempt OCR.';
+    };
+
+    imgElement.onerror = () => {
+      resultDiv.textContent = 'Failed to load image. Please check the URL.';
+    };
+
+    // OCR function
+    async function solveCaptcha() {
+      resultDiv.textContent = 'Processing...';
+      try {
+        const worker = Tesseract.createWorker({
+          logger: m => console.log(m),
+        });
+        await worker.load();
+        await worker.loadLanguage('eng');
+        await worker.initialize('eng');
+        const { data: { text } } = await worker.recognize(imgElement.src);
+        await worker.terminate();
+
+        // Clean up the result
+        const cleanedText = text.trim().replace(/\s+/g, '');
+        resultDiv.innerHTML = `Recognized Text: <strong>${cleanedText}</strong>`;
+      } catch (err) {
+        resultDiv.textContent = 'Error during OCR: ' + err.message;
+      }
+    }
+
+    // Event listener
+    solveButton.addEventListener('click', () => {
+      solveCaptcha();
+    });
+  });
+</script>
+</body>
+</html>
